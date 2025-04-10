@@ -1,0 +1,13 @@
+[gd_scene load_steps=2 format=3 uid="uid://3cmaoqji47x8"]
+
+[ext_resource type="Script" uid="uid://ogv0eekosuq4" path="res://examples/Example.cs" id="1_od57n"]
+
+[node name="Example" type="Node"]
+script = ExtResource("1_od57n")
+"Some Bool" = true
+"Some Integer" = 0
+"Some String" = ""
+"Some Vector4" = Vector4(0, 0, 0, 0)
+"Say Hello Button" = Callable()
+"Read Only String" = "This is a read-only string."
+"Some Flags" = 0
