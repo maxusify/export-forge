@@ -52,7 +52,7 @@ namespace ExportForge
             Type valueType
         )
         {
-            property.SetPropertyHint(PropertyHint.ArrayType, $"{keyType.Name},{valueType.Name}");
+            property.SetPropertyHint(PropertyHint.DictionaryType, $"{keyType.Name},{valueType.Name}");
             return property;
         }
 
