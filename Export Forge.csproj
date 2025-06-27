@@ -4,5 +4,15 @@
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <RootNamespace>ExportForge</RootNamespace>
     <Nullable>enable</Nullable>
+
+    <!-- Project Excludes -->
+    <DefaultItemExcludes Condition="'$(Configuration)' == 'ExportRelease'">
+      $(DefaultItemExcludes);test/**/*;script_templates/**/*;examples/**/*
+    </DefaultItemExcludes>
+
+    <!-- Project Excludes -->
+    <DefaultItemExcludes Condition="'$(Configuration)' == 'Debug'">
+      $(DefaultItemExcludes);script_templates/**/*;examples/**/*
+    </DefaultItemExcludes>
   </PropertyGroup>
 </Project>
