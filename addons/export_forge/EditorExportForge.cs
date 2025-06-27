@@ -19,13 +19,17 @@ namespace ExportForge
         /// <param name="name">Name of the property. </param>
         /// <returns>Editor property.</returns>
         IEditorExportProperty<TVariant> CreateProperty<[MustBeVariant] TVariant>(string name);
-
         /// <summary>
         /// Returns property list in format accepted by <see cref="GodotObject._GetPropertyList"/> method.
         /// </summary>
         /// <returns>Godot array of dictionaries.</returns>
+        GDC.Array<GDC.Dictionary> HandleGetPropertyList();
+        /// <summary>
+        /// Alias for <see cref="HandleGetPropertyList"/>.
+        /// Returns property list in format accepted by <see cref="GodotObject._GetPropertyList"/> method.
+        /// </summary>
+        /// <returns>Godot array of dictionaries.</returns>
         GDC.Array<GDC.Dictionary> ForgeProperties();
-
         /// <summary>
         /// Handles getter for the property with specified name.
         /// Should be called as return value of <see cref="GodotObject._Get"/> method.
@@ -33,7 +37,6 @@ namespace ExportForge
         /// <param name="name">Name of the property. </param>
         /// <returns>Value of the property.</returns>
         Variant HandleGetter(string name);
-
         /// <summary>
         /// Handles setter for the property with specified name.
         /// Should be called as return value of <see cref="GodotObject._Set"/> method.
@@ -50,8 +53,6 @@ namespace ExportForge
     /// </summary>
     public class EditorExportForge : IEditorExportForge
     {
-        #region Static Properties
-
         private static readonly Dictionary<Type, Variant.Type> TypeToVariantMap = new()
         {
             { typeof(int),              Variant.Type.Int },
@@ -94,23 +95,14 @@ namespace ExportForge
             { typeof(Vector4[]),        Variant.Type.PackedVector4Array }
         };
 
-        #endregion Static Properties
-        #region Properties
-
         private readonly Dictionary<string, IEditorExportProperty> _registered = [];
         private readonly GodotObject _godotObject;
         private GDC.Array<GDC.Dictionary>? _properties;
-
-        #endregion Properties
-        #region Constructor
 
         public EditorExportForge(GodotObject godotObject)
         {
             _godotObject = godotObject;
         }
-
-        #endregion Constructor
-        #region Public Methods
 
         public IEditorExportProperty<TVariant> CreateProperty<[MustBeVariant] TVariant>(string name)
         {
@@ -136,7 +128,9 @@ namespace ExportForge
             return property;
         }
 
-        public GDC.Array<GDC.Dictionary> ForgeProperties()
+        public GDC.Array<GDC.Dictionary> ForgeProperties() => HandleGetPropertyList();
+
+        public GDC.Array<GDC.Dictionary> HandleGetPropertyList()
         {
             _properties = [];
 
@@ -174,8 +168,6 @@ namespace ExportForge
 
             return property.SetValue(value);
         }
-
-        #endregion Public Methods
 
         private static Variant.Type GetVariantType<[MustBeVariant] TVariant>()
         {

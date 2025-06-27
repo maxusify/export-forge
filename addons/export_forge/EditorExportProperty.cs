@@ -16,12 +16,10 @@ namespace ExportForge
         /// </summary>
         /// <returns></returns>
         GDC.Dictionary BuildPropertyData();
-
         /// <summary>
         /// Returns the current value of the property as a <see cref="Variant"/>.
         /// </summary>
         Variant GetValue();
-
         /// <summary>
         /// Sets the value of the property from a <see cref="Variant"/>.
         /// </summary>
@@ -42,7 +40,6 @@ namespace ExportForge
         /// <param name="getter">Function to get the value.</param>
         /// <returns>Self.</returns>
         IEditorExportProperty<TVariant> OnGet(Func<TVariant> getter);
-
         /// <summary>
         /// Sets callback for setting the value of the property from a <see cref="TVariant"/>.
         /// </summary>
@@ -50,7 +47,6 @@ namespace ExportForge
         /// <param name="notifyWhenUpdated">Whether to notify target when the value is updated.</param>
         /// <returns>Self.</returns>
         IEditorExportProperty<TVariant> OnSet(Action<TVariant> setter, bool notifyWhenUpdated = true);
-
         /// <summary>
         /// Sets the hint for the property.
         /// This can be used by the editor to provide additional information about the property.
@@ -59,7 +55,6 @@ namespace ExportForge
         /// <param name="hintString">Optional hint string.</param>
         /// <returns>Self.</returns>
         IEditorExportProperty<TVariant> SetPropertyHint(PropertyHint hint, string? hintString = null);
-
         /// <summary>
         /// Add usage flag for the property.
         /// This can be used by the editor to provide additional information about the property.
@@ -67,20 +62,17 @@ namespace ExportForge
         /// <param name="usageFlags">Flags to add.</param>
         /// <returns>Self.</returns>
         IEditorExportProperty<TVariant> AddUsageFlags(PropertyUsageFlags usageFlags);
-
         /// <summary>
         /// Remove usage flag for the property.
         /// </summary>
         /// <param name="usageFlag">Usage flag to remove.</param>
         /// <returns>Self.</returns>
         IEditorExportProperty<TVariant> RemoveUsageFlags(PropertyUsageFlags usageFlag);
-
         /// <summary>
         /// Makes the property read-only.
         /// </summary>
         /// <returns>Self.</returns>
         IEditorExportProperty<TVariant> ReadOnly();
-
         /// <summary>
         /// Adds conditional requirement for this property to be visible or not. Useful
         /// for properties that depend on other values.
@@ -90,11 +82,13 @@ namespace ExportForge
         IEditorExportProperty<TVariant> When(Func<bool> checkCondition);
     }
 
+    /// <summary>
+    /// Editor export property for export forge.
+    /// </summary>
+    /// <typeparam name="TVariant">Property value type.</typeparam>
     public partial class EditorExportProperty<[MustBeVariant] TVariant>()
         : IEditorExportProperty<TVariant>, IDisposable
     {
-        #region Properties
-
         public string Name { get; set; } = string.Empty;
         public Variant.Type Type { get; set; }
         public GodotObject Target { get; set; } = null!;
@@ -107,9 +101,6 @@ namespace ExportForge
 
         private GDC.Dictionary? _propertyData;
         private bool _notifyWhenUpdated;
-
-        #endregion Properties
-        #region Public Methods
 
         public GDC.Dictionary BuildPropertyData()
         {
@@ -185,9 +176,6 @@ namespace ExportForge
             return this;
         }
 
-        #endregion Public Methods
-        #region Public Methods - Setup
-
         public IEditorExportProperty<TVariant> OnGet(Func<TVariant> getter)
         {
             Getter = getter;
@@ -219,7 +207,5 @@ namespace ExportForge
             _propertyData?.Dispose();
             _propertyData = null;
         }
-
-        #endregion Public Methods - Setup
     }
 }
