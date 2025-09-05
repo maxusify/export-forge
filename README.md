@@ -1,12 +1,11 @@
 # Export Forge
 
 ![Godot Engine](https://img.shields.io/badge/GODOT-%23FFFFFF.svg?style=for-the-badge&logo=godot-engine) ![.Net](https://img.shields.io/badge/.NET-5C2D91?style=for-the-badge&logo=.net&logoColor=white)
-
 <p align="center">
     <img src="icon.svg" alt="Export Forge Icon" width="150" />
 </p>
 
-Package designed to make advanced Godot Editor exports easy. Build property list for any `GodotObject` with intuitive API based on factory pattern.
+Package designed to make advanced Godot Editor exports easy. Build property list for any `GodotObject` with intuitive API.
 
 ## Installation
 
