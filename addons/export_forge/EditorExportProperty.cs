@@ -2,6 +2,8 @@ namespace ExportForge
 {
     using System;
 
+    using ExportForge.Utils;
+
     using Godot;
 
     using GDC = Godot.Collections;
@@ -45,8 +47,15 @@ namespace ExportForge
         /// </summary>
         /// <param name="setter">Function to set the value.</param>
         /// <param name="notifyWhenUpdated">Whether to notify target when the value is updated.</param>
+        /// <param name="debounceNotifyWhenUpdated">Debounce notify.</param>
+        /// <param name="debounceNotifyWhenUpdatedMiliseconds">Debounce miliseconds.</param>
         /// <returns>Self.</returns>
-        IEditorExportProperty<TVariant> OnSet(Action<TVariant> setter, bool notifyWhenUpdated = true);
+        IEditorExportProperty<TVariant> OnSet(
+            Action<TVariant> setter,
+            bool notifyWhenUpdated = true,
+            bool debounceNotifyWhenUpdated = true,
+            int debounceNotifyWhenUpdatedMiliseconds = 250
+            );
         /// <summary>
         /// Sets the hint for the property.
         /// This can be used by the editor to provide additional information about the property.
@@ -101,6 +110,9 @@ namespace ExportForge
 
         private GDC.Dictionary? _propertyData;
         private bool _notifyWhenUpdated;
+        private bool _debounceNotifyWhenUpdated;
+        private int _debounceNotifyWhenUpdatedMiliseconds;
+        private Debouncer? _debouncer;
 
         public GDC.Dictionary BuildPropertyData()
         {
@@ -145,8 +157,18 @@ namespace ExportForge
             {
                 setter(value.As<TVariant>());
 
-                // NOTE: This can be done with usage flags.
-                if (_notifyWhenUpdated)
+                if (!_notifyWhenUpdated)
+                {
+                    return true;
+                }
+
+                if (_debounceNotifyWhenUpdated)
+                {
+                    _debouncer ??= new Debouncer();
+                    _debouncer.DelayMilliseconds = _debounceNotifyWhenUpdatedMiliseconds;
+                    _debouncer.Debounce(Target.NotifyPropertyListChanged);
+                }
+                else
                 {
                     Target.NotifyPropertyListChanged();
                 }
@@ -182,7 +204,12 @@ namespace ExportForge
             return this;
         }
 
-        public IEditorExportProperty<TVariant> OnSet(Action<TVariant> setter, bool notifyWhenUpdated = true)
+        public IEditorExportProperty<TVariant> OnSet(
+            Action<TVariant> setter,
+            bool notifyWhenUpdated = true,
+            bool debounceNotifyWhenUpdated = true,
+            int debounceNotifyWhenUpdatedMiliseconds = 250
+        )
         {
             Setter = setter;
             _notifyWhenUpdated = notifyWhenUpdated;
