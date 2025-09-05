@@ -10,19 +10,21 @@ namespace ExportForge.Utils
 
         private CancellationTokenSource? _cancelTokenSource;
 
-        public void Debounce(Action action)
+        public async void Debounce(Action action)
         {
             _cancelTokenSource?.Cancel();
+            _cancelTokenSource?.Dispose();
             _cancelTokenSource = new CancellationTokenSource();
 
-            Task
-                .Delay(DelayMilliseconds, _cancelTokenSource.Token)
-                .ContinueWith(t => {
-                    if (!t.IsCanceled)
-                    {
-                        action();
-                    }
-                }, TaskScheduler.Default);
+            try
+            {
+                await Task.Delay(DelayMilliseconds, _cancelTokenSource.Token);
+                action();
+            }
+            catch (OperationCanceledException)
+            {
+                // Cancellation is expected. There is nothing to do.
+            }
         }
 
         public void Dispose()
