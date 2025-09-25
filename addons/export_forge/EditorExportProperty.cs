@@ -110,8 +110,8 @@ namespace ExportForge
 
         private GDC.Dictionary? _propertyData;
         private bool _notifyWhenUpdated;
-        private bool _debounceNotifyWhenUpdated;
-        private int _debounceNotifyWhenUpdatedMiliseconds;
+        private bool _debounceNotifyWhenUpdated = true;
+        private int _debounceNotifyWhenUpdatedMiliseconds = 250;
         private Debouncer? _debouncer;
 
         public GDC.Dictionary BuildPropertyData()
@@ -213,6 +213,8 @@ namespace ExportForge
         {
             Setter = setter;
             _notifyWhenUpdated = notifyWhenUpdated;
+            _debounceNotifyWhenUpdated = debounceNotifyWhenUpdated;
+            _debounceNotifyWhenUpdatedMiliseconds = debounceNotifyWhenUpdatedMiliseconds;
             return this;
         }
 
