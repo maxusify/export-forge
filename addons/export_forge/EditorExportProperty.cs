@@ -166,7 +166,7 @@ namespace ExportForge
                 {
                     _debouncer ??= new Debouncer();
                     _debouncer.DelayMilliseconds = _debounceNotifyWhenUpdatedMiliseconds;
-                    _debouncer.Debounce(() => Target.CallDeferred(GodotObject.MethodName.NotifyPropertyListChanged));
+                    _debouncer.Debounce(() => Target?.CallDeferred(GodotObject.MethodName.NotifyPropertyListChanged));
                 }
                 else
                 {
