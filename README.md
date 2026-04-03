@@ -18,8 +18,8 @@ with [GodotEnv](https://github.com/chickensoft-games/GodotEnv) by adding the fol
     "addons": {
         // ... other addons ...
 
-        "export-forge": {
-            "url": "https://github.com/maxusify/export-forge",
+        "export_forge": {
+            "url": "https://github.com/maxusify/export_forge",
             "subfolder": "addons/export-forge"
         }
     }
