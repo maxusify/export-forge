@@ -1,8 +1,8 @@
-namespace ExportForge
+namespace SabishiDev.ExportForge
 {
     using System;
 
-    using ExportForge.Utils;
+    using SabishiDev.ExportForge.Utils;
 
     using Godot;
 
@@ -48,14 +48,14 @@ namespace ExportForge
         /// <param name="setter">Function to set the value.</param>
         /// <param name="notifyWhenUpdated">Whether to notify target when the value is updated.</param>
         /// <param name="debounceNotifyWhenUpdated">Debounce notify.</param>
-        /// <param name="debounceNotifyWhenUpdatedMiliseconds">Debounce miliseconds.</param>
+        /// <param name="debounceNotifyWhenUpdatedMilliseconds">Debounce miliseconds.</param>
         /// <returns>Self.</returns>
         IEditorExportProperty<TVariant> OnSet(
             Action<TVariant> setter,
             bool notifyWhenUpdated = true,
             bool debounceNotifyWhenUpdated = true,
-            int debounceNotifyWhenUpdatedMiliseconds = 250
-            );
+            int debounceNotifyWhenUpdatedMilliseconds = 250
+        );
         /// <summary>
         /// Sets the hint for the property.
         /// This can be used by the editor to provide additional information about the property.
@@ -95,14 +95,15 @@ namespace ExportForge
     /// Editor export property for export forge.
     /// </summary>
     /// <typeparam name="TVariant">Property value type.</typeparam>
-    public partial class EditorExportProperty<[MustBeVariant] TVariant>()
-        : IEditorExportProperty<TVariant>, IDisposable
+    public partial class EditorExportProperty<[MustBeVariant] TVariant> : RefCounted, IEditorExportProperty<TVariant>
     {
-        public string Name { get; set; } = string.Empty;
-        public Variant.Type Type { get; set; }
-        public GodotObject Target { get; set; } = null!;
+        public string Name { get; init; } = string.Empty;
+        public Variant.Type Type { get; init; }
+        public GodotObject Target { get; init; } = null!;
+
         public Func<TVariant>? Getter { get; private set; }
         public Action<TVariant>? Setter { get; private set; }
+
         public Func<bool>? CheckRequirement { get; private set; }
         public PropertyUsageFlags UsageFlags { get; private set; } = PropertyUsageFlags.Default;
         public PropertyHint PropertyHint { get; private set; } = PropertyHint.None;
@@ -110,8 +111,8 @@ namespace ExportForge
 
         private GDC.Dictionary? _propertyData;
         private bool _notifyWhenUpdated;
-        private bool _debounceNotifyWhenUpdated = true;
-        private int _debounceNotifyWhenUpdatedMiliseconds = 250;
+        private bool _shouldDebounce = true;
+        private int _debounceMs = 250;
         private Debouncer? _debouncer;
 
         public GDC.Dictionary BuildPropertyData()
@@ -147,43 +148,39 @@ namespace ExportForge
             return _propertyData;
         }
 
-        public Variant GetValue() => Getter is { } getter
-            ? Variant.From(getter())
-            : default;
+        public Variant GetValue()
+        {
+            return Getter is { } getter ? Variant.From(getter()) : default;
+        }
 
         public bool SetValue(Variant value)
         {
-            if (Setter is { } setter)
+            if (Setter is not { } setter)
             {
-                setter(value.As<TVariant>());
+                return false;
+            }
 
-                if (!_notifyWhenUpdated)
-                {
-                    return true;
-                }
+            setter(value.As<TVariant>());
 
-                if (_debounceNotifyWhenUpdated)
-                {
-                    _debouncer ??= new Debouncer();
-                    _debouncer.DelayMilliseconds = _debounceNotifyWhenUpdatedMiliseconds;
-                    _debouncer.Debounce(() => {
-                        if (!GodotObject.IsInstanceValid(Target))
-                        {
-                            return;
-                        }
-
-                        Target.CallDeferred(GodotObject.MethodName.NotifyPropertyListChanged);
-                    });
-                }
-                else
-                {
-                    Target.NotifyPropertyListChanged();
-                }
-
+            if (!_notifyWhenUpdated)
+            {
                 return true;
             }
 
-            return false;
+            // Handle notifying editor about changes.
+            if (_shouldDebounce)
+            {
+                _debouncer ??= new Debouncer();
+                _debouncer.DelayMilliseconds = _debounceMs;
+                _ = _debouncer.Debounce(_Target_NotifyPropertyListChanged);
+            }
+            else
+            {
+                Target.NotifyPropertyListChanged();
+            }
+
+            return true;
+
         }
 
         public IEditorExportProperty<TVariant> SetPropertyHint(PropertyHint hint, string? hintString = null)
@@ -215,13 +212,13 @@ namespace ExportForge
             Action<TVariant> setter,
             bool notifyWhenUpdated = true,
             bool debounceNotifyWhenUpdated = true,
-            int debounceNotifyWhenUpdatedMiliseconds = 250
+            int debounceNotifyWhenUpdatedMilliseconds = 250
         )
         {
             Setter = setter;
             _notifyWhenUpdated = notifyWhenUpdated;
-            _debounceNotifyWhenUpdated = debounceNotifyWhenUpdated;
-            _debounceNotifyWhenUpdatedMiliseconds = debounceNotifyWhenUpdatedMiliseconds;
+            _shouldDebounce = debounceNotifyWhenUpdated;
+            _debounceMs = debounceNotifyWhenUpdatedMilliseconds;
             return this;
         }
 
@@ -237,11 +234,14 @@ namespace ExportForge
             return this;
         }
 
-        public void Dispose()
+        private void _Target_NotifyPropertyListChanged()
         {
-            GC.SuppressFinalize(this);
-            _propertyData?.Dispose();
-            _propertyData = null;
+            if (!IsInstanceValid(Target))
+            {
+                return;
+            }
+
+            Target.CallDeferred(GodotObject.MethodName.NotifyPropertyListChanged);
         }
     }
 }

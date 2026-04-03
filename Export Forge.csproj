@@ -1,18 +1,18 @@
-<Project Sdk="Godot.NET.Sdk/4.4.1">
+<Project Sdk="Godot.NET.Sdk/4.6.2">
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
-    <RootNamespace>ExportForge</RootNamespace>
+    <RootNamespace>SabishiDev.ExportForge</RootNamespace>
     <Nullable>enable</Nullable>
 
     <!-- Project Excludes -->
     <DefaultItemExcludes Condition="'$(Configuration)' == 'ExportRelease'">
-      $(DefaultItemExcludes);test/**/*;script_templates/**/*;examples/**/*
+      $(DefaultItemExcludes);test/**/*;script_templates/**/*;
     </DefaultItemExcludes>
 
     <!-- Project Excludes -->
     <DefaultItemExcludes Condition="'$(Configuration)' == 'Debug'">
-      $(DefaultItemExcludes);script_templates/**/*;examples/**/*
+      $(DefaultItemExcludes);script_templates/**/*;
     </DefaultItemExcludes>
   </PropertyGroup>
 </Project>

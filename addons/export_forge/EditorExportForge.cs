@@ -1,4 +1,4 @@
-namespace ExportForge
+namespace SabishiDev.ExportForge
 {
     using System;
     using System.Collections.Generic;
@@ -51,9 +51,9 @@ namespace ExportForge
     /// Class that provides methods for creating editor properties
     /// provided through <see cref="GodotObject._GetPropertyList"/> method.
     /// </summary>
-    public class EditorExportForge : IEditorExportForge
+    public partial class EditorExportForge : RefCounted, IEditorExportForge
     {
-        private static readonly Dictionary<Type, Variant.Type> TypeToVariantMap = new()
+        private static readonly Dictionary<Type, Variant.Type> _typeToVariantMap = new()
         {
             { typeof(int),              Variant.Type.Int },
             { typeof(float),            Variant.Type.Float },
@@ -95,18 +95,23 @@ namespace ExportForge
             { typeof(Vector4[]),        Variant.Type.PackedVector4Array }
         };
 
-        private readonly Dictionary<string, IEditorExportProperty> _registered = [];
-        private readonly GodotObject _godotObject;
-        private GDC.Array<GDC.Dictionary>? _properties;
+        private readonly GodotObject _target;
+        private GDC.Array<GDC.Dictionary>? _propertyData;
+        private readonly Dictionary<string, IEditorExportProperty> _properties = [];
 
-        public EditorExportForge(GodotObject godotObject)
+        public EditorExportForge()
         {
-            _godotObject = godotObject;
+            _target = this;
+        }
+
+        public EditorExportForge(GodotObject target)
+        {
+            _target = target;
         }
 
         public IEditorExportProperty<TVariant> CreateProperty<[MustBeVariant] TVariant>(string name)
         {
-            if (_registered.ContainsKey(name))
+            if (_properties.ContainsKey(name))
             {
                 throw new ArgumentException($"Property with name '{name}' already exists.", nameof(name));
             }
@@ -117,24 +122,27 @@ namespace ExportForge
                 ? Variant.Type.Object
                 : GetVariantType<TVariant>();
 
-            var property = new EditorExportProperty<TVariant>() {
+            var property = new EditorExportProperty<TVariant> {
                 Name = name,
                 Type = variantType,
-                Target = _godotObject
+                Target = _target
             };
 
-            _registered[name] = property;
+            _properties[name] = property;
 
             return property;
         }
 
-        public GDC.Array<GDC.Dictionary> ForgeProperties() => HandleGetPropertyList();
+        public GDC.Array<GDC.Dictionary> ForgeProperties()
+        {
+            return HandleGetPropertyList();
+        }
 
         public GDC.Array<GDC.Dictionary> HandleGetPropertyList()
         {
-            _properties = [];
+            _propertyData = [];
 
-            foreach (var (_, prop) in _registered)
+            foreach (var (_, prop) in _properties)
             {
                 var propData = prop.BuildPropertyData();
 
@@ -143,15 +151,15 @@ namespace ExportForge
                     continue;
                 }
 
-                _properties.Add(propData);
+                _propertyData.Add(propData);
             }
 
-            return _properties;
+            return _propertyData;
         }
 
         public Variant HandleGetter(string name)
         {
-            if (!_registered.TryGetValue(name, out var property))
+            if (!_properties.TryGetValue(name, out var property))
             {
                 return default;
             }
@@ -161,7 +169,7 @@ namespace ExportForge
 
         public bool HandleSetter(string name, Variant value)
         {
-            if (!_registered.TryGetValue(name, out var property))
+            if (!_properties.TryGetValue(name, out var property))
             {
                 return false;
             }
@@ -173,7 +181,7 @@ namespace ExportForge
         {
             var type = typeof(TVariant);
 
-            if (TypeToVariantMap.TryGetValue(type, out var variantType))
+            if (_typeToVariantMap.TryGetValue(type, out var variantType))
             {
                 return variantType;
             }

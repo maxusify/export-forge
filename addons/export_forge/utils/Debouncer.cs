@@ -1,19 +1,23 @@
-namespace ExportForge.Utils
+namespace SabishiDev.ExportForge.Utils
 {
     using System;
     using System.Threading;
     using System.Threading.Tasks;
 
-    public class Debouncer() : IDisposable
+    public sealed class Debouncer : IDisposable
     {
         public int DelayMilliseconds { get; set; }
 
         private CancellationTokenSource? _cancelTokenSource;
 
-        public async void Debounce(Action action)
+        public async Task Debounce(Action action)
         {
-            _cancelTokenSource?.Cancel();
-            _cancelTokenSource?.Dispose();
+            if (_cancelTokenSource is not null)
+            {
+               await _cancelTokenSource.CancelAsync();
+               _cancelTokenSource.Dispose();
+            }
+
             _cancelTokenSource = new CancellationTokenSource();
 
             try
@@ -29,17 +33,8 @@ namespace ExportForge.Utils
 
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                _cancelTokenSource?.Dispose();
-                _cancelTokenSource = null;
-            }
+            _cancelTokenSource?.Dispose();
+            _cancelTokenSource = null;
         }
     }
 }

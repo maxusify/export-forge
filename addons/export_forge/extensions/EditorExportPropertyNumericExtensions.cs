@@ -1,4 +1,4 @@
-namespace ExportForge
+namespace SabishiDev.ExportForge
 {
     using System;
     using System.Text;
@@ -10,6 +10,10 @@ namespace ExportForge
     /// </summary>
     public static class EditorExportPropertyNumericExtensions
     {
+        public const double DEFAULT_STEP_DOUBLE = 0.01;
+        public const float DEFAULT_STEP_FLOAT = 0.01f;
+        public const int DEFAULT_STEP_INT = 1;
+
         /// <summary>
         /// Allows vector to have linked values when edited in the editor.
         /// </summary>
@@ -93,9 +97,9 @@ namespace ExportForge
         /// <returns>Self.</returns>
         public static IEditorExportProperty<int> Range(
             this IEditorExportProperty<int> property,
-            float min,
-            float max,
-            float step = 0.01f,
+            int min,
+            int max,
+            int step = DEFAULT_STEP_INT,
             bool exponential = false,
             bool orGreater = false,
             bool orLess = false,
@@ -106,7 +110,17 @@ namespace ExportForge
         )
         {
             property.ApplyRange(
-                min, max, step, exponential, orGreater, orLess, radiansAsDegrees, degrees, hideSlider, suffix);
+                min,
+                max,
+                step,
+                exponential,
+                orGreater,
+                orLess,
+                radiansAsDegrees,
+                degrees,
+                hideSlider,
+                suffix
+            );
 
             return property;
         }
@@ -130,7 +144,7 @@ namespace ExportForge
             this IEditorExportProperty<float> property,
             float min,
             float max,
-            float step = 0.01f,
+            float step = DEFAULT_STEP_FLOAT,
             bool exponential = false,
             bool orGreater = false,
             bool orLess = false,
@@ -141,7 +155,62 @@ namespace ExportForge
         )
         {
             property.ApplyRange(
-                min, max, step, exponential, orGreater, orLess, radiansAsDegrees, degrees, hideSlider, suffix);
+                min,
+                max,
+                step,
+                exponential,
+                orGreater,
+                orLess,
+                radiansAsDegrees,
+                degrees,
+                hideSlider,
+                suffix
+            );
+
+            return property;
+        }
+
+        /// <summary>
+        /// Makes float value ranged.
+        /// </summary>
+        /// <param name="property">Property.</param>
+        /// <param name="min">Minimal value.</param>
+        /// <param name="max">Maximum value.</param>
+        /// <param name="step">Step value.</param>
+        /// <param name="exponential">Editing in exponential scale.</param>
+        /// <param name="orGreater">Greater values allowed.</param>
+        /// <param name="orLess">Lesser values allowed.</param>
+        /// <param name="radiansAsDegrees">Treats value as degrees and converts to radians.</param>
+        /// <param name="degrees">Treats value as degrees.</param>
+        /// <param name="hideSlider">Hides slider.</param>
+        /// <param name="suffix">Optional suffix.</param>
+        /// <returns>Self.</returns>
+        public static IEditorExportProperty<double> Range(
+            this IEditorExportProperty<double> property,
+            double min,
+            double max,
+            double step = DEFAULT_STEP_DOUBLE,
+            bool exponential = false,
+            bool orGreater = false,
+            bool orLess = false,
+            bool radiansAsDegrees = false,
+            bool degrees = false,
+            bool hideSlider = false,
+            string suffix = ""
+        )
+        {
+            property.ApplyRange(
+                min,
+                max,
+                step,
+                exponential,
+                orGreater,
+                orLess,
+                radiansAsDegrees,
+                degrees,
+                hideSlider,
+                suffix
+            );
 
             return property;
         }
@@ -165,7 +234,7 @@ namespace ExportForge
             this IEditorExportProperty<Vector2> property,
             float min,
             float max,
-            float step = 0.01f,
+            float step = DEFAULT_STEP_FLOAT,
             bool exponential = false,
             bool orGreater = false,
             bool orLess = false,
@@ -198,9 +267,9 @@ namespace ExportForge
         /// <returns>Self.</returns>
         public static IEditorExportProperty<Vector2I> Range(
             this IEditorExportProperty<Vector2I> property,
-            float min,
-            float max,
-            float step = 0.01f,
+            int min,
+            int max,
+            int step = DEFAULT_STEP_INT,
             bool exponential = false,
             bool orGreater = false,
             bool orLess = false,
@@ -235,7 +304,7 @@ namespace ExportForge
             this IEditorExportProperty<Vector3> property,
             float min,
             float max,
-            float step = 0.01f,
+            float step = DEFAULT_STEP_FLOAT,
             bool exponential = false,
             bool orGreater = false,
             bool orLess = false,
@@ -268,9 +337,9 @@ namespace ExportForge
         /// <returns>Self.</returns>
         public static IEditorExportProperty<Vector3I> Range(
             this IEditorExportProperty<Vector3I> property,
-            float min,
-            float max,
-            float step = 0.01f,
+            int min,
+            int max,
+            int step = DEFAULT_STEP_INT,
             bool exponential = false,
             bool orGreater = false,
             bool orLess = false,
@@ -305,7 +374,7 @@ namespace ExportForge
             this IEditorExportProperty<Vector4> property,
             float min,
             float max,
-            float step = 0.01f,
+            float step = DEFAULT_STEP_FLOAT,
             bool exponential = false,
             bool orGreater = false,
             bool orLess = false,
@@ -338,9 +407,9 @@ namespace ExportForge
         /// <returns>Self.</returns>
         public static IEditorExportProperty<Vector4I> Range(
             this IEditorExportProperty<Vector4I> property,
-            float min,
-            float max,
-            float step = 0.01f,
+            int min,
+            int max,
+            int step = DEFAULT_STEP_INT,
             bool exponential = false,
             bool orGreater = false,
             bool orLess = false,
@@ -393,9 +462,9 @@ namespace ExportForge
 
         private static void ApplyRange<[MustBeVariant] TVariant>(
             this IEditorExportProperty<TVariant> property,
-            float min,
-            float max,
-            float step = 0.01f,
+            double min,
+            double max,
+            double step = DEFAULT_STEP_DOUBLE,
             bool exponential = false,
             bool orGreater = false,
             bool orLess = false,
@@ -405,14 +474,10 @@ namespace ExportForge
             string suffix = ""
         )
         {
+
             var sb = new StringBuilder();
 
-            sb.Append($"{min}, {max}");
-
-            if (step != 0.1f)
-            {
-                sb.Append($", {step}");
-            }
+            sb.Append($"{min}, {max}, {step}");
 
             if (exponential)
             {
