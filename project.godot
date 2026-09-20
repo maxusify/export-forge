@@ -18,7 +18,7 @@ config/name="Export Forge"
 config/description="Custom editor exports were never this easy!"
 config/version="1.0.0"
 config/tags=PackedStringArray("addon", "c_sharp")
-config/features=PackedStringArray("4.6", "C#", "Forward Plus")
+config/features=PackedStringArray("4.7", "C#", "Forward Plus")
 config/icon="res://icon.svg"
 
 [dotnet]
