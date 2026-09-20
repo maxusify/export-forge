@@ -36,7 +36,7 @@ namespace SabishiDev.ExportForge
         /// </summary>
         /// <param name="name">Name of the property. </param>
         /// <returns>Value of the property.</returns>
-        Variant HandleGetter(string name);
+        Variant HandleGetter(StringName name);
         /// <summary>
         /// Handles setter for the property with specified name.
         /// Should be called as return value of <see cref="GodotObject._Set"/> method.
@@ -44,7 +44,7 @@ namespace SabishiDev.ExportForge
         /// <param name="name">Name of the property.</param>
         /// <param name="value">Value to set.</param>
         /// <returns>Result of the setter operation.</returns>
-        bool HandleSetter(string name, Variant value);
+        bool HandleSetter(StringName name, Variant value);
     }
 
     /// <summary>
@@ -56,7 +56,9 @@ namespace SabishiDev.ExportForge
         private static readonly Dictionary<Type, Variant.Type> _typeToVariantMap = new()
         {
             { typeof(int),              Variant.Type.Int },
+            { typeof(long),             Variant.Type.Int },
             { typeof(float),            Variant.Type.Float },
+            { typeof(double),           Variant.Type.Float },
             { typeof(string),           Variant.Type.String },
             { typeof(bool),             Variant.Type.Bool },
             { typeof(Vector2),          Variant.Type.Vector2 },
@@ -133,10 +135,7 @@ namespace SabishiDev.ExportForge
             return property;
         }
 
-        public GDC.Array<GDC.Dictionary> ForgeProperties()
-        {
-            return HandleGetPropertyList();
-        }
+        public GDC.Array<GDC.Dictionary> ForgeProperties() => HandleGetPropertyList();
 
         public GDC.Array<GDC.Dictionary> HandleGetPropertyList()
         {
@@ -157,7 +156,7 @@ namespace SabishiDev.ExportForge
             return _propertyData;
         }
 
-        public Variant HandleGetter(string name)
+        public Variant HandleGetter(StringName name)
         {
             if (!_properties.TryGetValue(name, out var property))
             {
@@ -167,7 +166,7 @@ namespace SabishiDev.ExportForge
             return property.GetValue();
         }
 
-        public bool HandleSetter(string name, Variant value)
+        public bool HandleSetter(StringName name, Variant value)
         {
             if (!_properties.TryGetValue(name, out var property))
             {

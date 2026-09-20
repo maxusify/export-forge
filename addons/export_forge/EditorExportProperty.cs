@@ -18,10 +18,12 @@ namespace SabishiDev.ExportForge
         /// </summary>
         /// <returns></returns>
         GDC.Dictionary BuildPropertyData();
+
         /// <summary>
         /// Returns the current value of the property as a <see cref="Variant"/>.
         /// </summary>
         Variant GetValue();
+
         /// <summary>
         /// Sets the value of the property from a <see cref="Variant"/>.
         /// </summary>
@@ -42,13 +44,14 @@ namespace SabishiDev.ExportForge
         /// <param name="getter">Function to get the value.</param>
         /// <returns>Self.</returns>
         IEditorExportProperty<TVariant> OnGet(Func<TVariant> getter);
+
         /// <summary>
         /// Sets callback for setting the value of the property from a <see cref="TVariant"/>.
         /// </summary>
         /// <param name="setter">Function to set the value.</param>
         /// <param name="notifyWhenUpdated">Whether to notify target when the value is updated.</param>
         /// <param name="debounceNotifyWhenUpdated">Debounce notify.</param>
-        /// <param name="debounceNotifyWhenUpdatedMilliseconds">Debounce miliseconds.</param>
+        /// <param name="debounceNotifyWhenUpdatedMilliseconds">Debounce milliseconds.</param>
         /// <returns>Self.</returns>
         IEditorExportProperty<TVariant> OnSet(
             Action<TVariant> setter,
@@ -56,6 +59,7 @@ namespace SabishiDev.ExportForge
             bool debounceNotifyWhenUpdated = true,
             int debounceNotifyWhenUpdatedMilliseconds = 250
         );
+
         /// <summary>
         /// Sets the hint for the property.
         /// This can be used by the editor to provide additional information about the property.
@@ -64,6 +68,14 @@ namespace SabishiDev.ExportForge
         /// <param name="hintString">Optional hint string.</param>
         /// <returns>Self.</returns>
         IEditorExportProperty<TVariant> SetPropertyHint(PropertyHint hint, string? hintString = null);
+
+        /// <summary>
+        /// Sets usage flags for the property.
+        /// </summary>
+        /// <param name="usageFlags">Usage flags.</param>
+        /// <returns>Self.</returns>
+        public IEditorExportProperty<TVariant> SetUsageFlags(PropertyUsageFlags usageFlags);
+
         /// <summary>
         /// Add usage flag for the property.
         /// This can be used by the editor to provide additional information about the property.
@@ -71,17 +83,14 @@ namespace SabishiDev.ExportForge
         /// <param name="usageFlags">Flags to add.</param>
         /// <returns>Self.</returns>
         IEditorExportProperty<TVariant> AddUsageFlags(PropertyUsageFlags usageFlags);
+
         /// <summary>
         /// Remove usage flag for the property.
         /// </summary>
         /// <param name="usageFlag">Usage flag to remove.</param>
         /// <returns>Self.</returns>
         IEditorExportProperty<TVariant> RemoveUsageFlags(PropertyUsageFlags usageFlag);
-        /// <summary>
-        /// Makes the property read-only.
-        /// </summary>
-        /// <returns>Self.</returns>
-        IEditorExportProperty<TVariant> ReadOnly();
+
         /// <summary>
         /// Adds conditional requirement for this property to be visible or not. Useful
         /// for properties that depend on other values.
@@ -89,6 +98,24 @@ namespace SabishiDev.ExportForge
         /// <param name="checkCondition">Specified requirement.</param>
         /// <returns>Self.</returns>
         IEditorExportProperty<TVariant> When(Func<bool> checkCondition);
+
+        /// <summary>
+        /// Makes the property read-only.
+        /// </summary>
+        /// <returns>Self.</returns>
+        IEditorExportProperty<TVariant> ReadOnly();
+
+        /// <summary>
+        /// Makes property serializable and stored in scene file.
+        /// </summary>
+        /// <returns>Self.</returns>
+        IEditorExportProperty<TVariant> Store();
+
+        /// <summary>
+        /// Makes property invisible for editor.
+        /// </summary>
+        /// <returns>Self.</returns>
+        IEditorExportProperty<TVariant> Internal();
     }
 
     /// <summary>
@@ -100,10 +127,8 @@ namespace SabishiDev.ExportForge
         public string Name { get; init; } = string.Empty;
         public Variant.Type Type { get; init; }
         public GodotObject Target { get; init; } = null!;
-
         public Func<TVariant>? Getter { get; private set; }
         public Action<TVariant>? Setter { get; private set; }
-
         public Func<bool>? CheckRequirement { get; private set; }
         public PropertyUsageFlags UsageFlags { get; private set; } = PropertyUsageFlags.Default;
         public PropertyHint PropertyHint { get; private set; } = PropertyHint.None;
@@ -148,10 +173,7 @@ namespace SabishiDev.ExportForge
             return _propertyData;
         }
 
-        public Variant GetValue()
-        {
-            return Getter is { } getter ? Variant.From(getter()) : default;
-        }
+        public Variant GetValue() => Getter is { } getter ? Variant.From(getter()) : default;
 
         public bool SetValue(Variant value)
         {
@@ -172,7 +194,7 @@ namespace SabishiDev.ExportForge
             {
                 _debouncer ??= new Debouncer();
                 _debouncer.DelayMilliseconds = _debounceMs;
-                _ = _debouncer.Debounce(_Target_NotifyPropertyListChanged);
+                _ = _debouncer.Debounce(OnTargetNotifyPropertyListChanged);
             }
             else
             {
@@ -187,6 +209,12 @@ namespace SabishiDev.ExportForge
         {
             PropertyHint = hint;
             HintString = hintString ?? string.Empty;
+            return this;
+        }
+
+        public IEditorExportProperty<TVariant> SetUsageFlags(PropertyUsageFlags usageFlags)
+        {
+            UsageFlags = usageFlags;
             return this;
         }
 
@@ -234,7 +262,19 @@ namespace SabishiDev.ExportForge
             return this;
         }
 
-        private void _Target_NotifyPropertyListChanged()
+        public IEditorExportProperty<TVariant> Store()
+        {
+            UsageFlags |= PropertyUsageFlags.Storage;
+            return this;
+        }
+
+        public IEditorExportProperty<TVariant> Internal()
+        {
+            UsageFlags &= ~PropertyUsageFlags.Editor;
+            return this;
+        }
+
+        private void OnTargetNotifyPropertyListChanged()
         {
             if (!IsInstanceValid(Target))
             {
