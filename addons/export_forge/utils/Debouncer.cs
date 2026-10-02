@@ -4,37 +4,37 @@ namespace SabishiDev.ExportForge.Utils
     using System.Threading;
     using System.Threading.Tasks;
 
-    public sealed class Debouncer : IDisposable
+    public sealed class Debouncer
     {
-        public int DelayMilliseconds { get; set; }
+        private int _version;
 
-        private CancellationTokenSource? _cancelTokenSource;
-
-        public async Task Debounce(Action action)
+        /// <summary>
+        /// Runs <paramref name="action"/> after <paramref name="delayMilliseconds"/>,
+        /// unless another call to <see cref="Debounce"/> or <see cref="Cancel"/> happens first.
+        /// </summary>
+        /// <param name="action">Action to run.</param>
+        /// <param name="delayMilliseconds">Delay before running the action.</param>
+        public async Task Debounce(Action action, int delayMilliseconds)
         {
-            if (_cancelTokenSource is not null)
+            var version = Interlocked.Increment(ref _version);
+
+            await Task.Delay(delayMilliseconds);
+
+            // A newer call superseded this one.
+            if (version != Volatile.Read(ref _version))
             {
-               await _cancelTokenSource.CancelAsync();
-               _cancelTokenSource.Dispose();
+                return;
             }
 
-            _cancelTokenSource = new CancellationTokenSource();
-
-            try
-            {
-                await Task.Delay(DelayMilliseconds, _cancelTokenSource.Token);
-                action();
-            }
-            catch (OperationCanceledException)
-            {
-                // Cancellation is expected. There is nothing to do.
-            }
+            action();
         }
 
-        public void Dispose()
+        /// <summary>
+        /// Cancels the pending action, if any.
+        /// </summary>
+        public void Cancel()
         {
-            _cancelTokenSource?.Dispose();
-            _cancelTokenSource = null;
+            Interlocked.Increment(ref _version);
         }
     }
 }

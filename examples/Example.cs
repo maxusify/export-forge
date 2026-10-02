@@ -67,12 +67,11 @@ namespace MyProject
                 .OnGet(() => Callable.From(ConditionalAction))
                 .ToolButton("Conditional Action", icon: "Variant");
 
-            // Create a flags property.
+            // Create a flags property. Enum hints are added automatically.
             _forge
-                .CreateProperty<int>("Some Flags")
-                .OnGet(() => (int)SomeFlags)
-                .OnSet(value => SomeFlags = (FlagsExample)value)
-                .Flags<FlagsExample>();
+                .CreateProperty<FlagsExample>("Some Flags")
+                .OnGet(() => SomeFlags)
+                .OnSet(value => SomeFlags = value);
         }
 
         public override Array<Dictionary> _GetPropertyList()
