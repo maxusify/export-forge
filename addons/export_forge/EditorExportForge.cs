@@ -3,115 +3,33 @@ namespace SabishiDev.ExportForge
     using System;
     using System.Collections.Generic;
 
+    using SabishiDev.ExportForge.Utils;
+
     using Godot;
 
     using GDC = Godot.Collections;
 
     /// <summary>
-    /// Interface for export logic builder.
-    /// </summary>
-    public interface IEditorExportForge
-    {
-        /// <summary>
-        /// Creates a new property with the specified name. The property is of type <typeparamref name="TVariant"/>.
-        /// </summary>
-        /// <typeparam name="TVariant">Type of property. Must be a variant type. </typeparam>
-        /// <param name="name">Name of the property. </param>
-        /// <returns>Editor property.</returns>
-        IEditorExportProperty<TVariant> CreateProperty<[MustBeVariant] TVariant>(string name);
-        /// <summary>
-        /// Returns property list in format accepted by <see cref="GodotObject._GetPropertyList"/> method.
-        /// </summary>
-        /// <returns>Godot array of dictionaries.</returns>
-        GDC.Array<GDC.Dictionary> HandleGetPropertyList();
-        /// <summary>
-        /// Alias for <see cref="HandleGetPropertyList"/>.
-        /// Returns property list in format accepted by <see cref="GodotObject._GetPropertyList"/> method.
-        /// </summary>
-        /// <returns>Godot array of dictionaries.</returns>
-        GDC.Array<GDC.Dictionary> ForgeProperties();
-        /// <summary>
-        /// Handles getter for the property with specified name.
-        /// Should be called as return value of <see cref="GodotObject._Get"/> method.
-        /// </summary>
-        /// <param name="name">Name of the property. </param>
-        /// <returns>Value of the property.</returns>
-        Variant HandleGetter(StringName name);
-        /// <summary>
-        /// Handles setter for the property with specified name.
-        /// Should be called as return value of <see cref="GodotObject._Set"/> method.
-        /// </summary>
-        /// <param name="name">Name of the property.</param>
-        /// <param name="value">Value to set.</param>
-        /// <returns>Result of the setter operation.</returns>
-        bool HandleSetter(StringName name, Variant value);
-    }
-
-    /// <summary>
     /// Class that provides methods for creating editor properties
     /// provided through <see cref="GodotObject._GetPropertyList"/> method.
     /// </summary>
-    public partial class EditorExportForge : RefCounted, IEditorExportForge
+    public class EditorExportForge(GodotObject target)
     {
-        private static readonly Dictionary<Type, Variant.Type> _typeToVariantMap = new()
-        {
-            { typeof(int),              Variant.Type.Int },
-            { typeof(long),             Variant.Type.Int },
-            { typeof(float),            Variant.Type.Float },
-            { typeof(double),           Variant.Type.Float },
-            { typeof(string),           Variant.Type.String },
-            { typeof(bool),             Variant.Type.Bool },
-            { typeof(Vector2),          Variant.Type.Vector2 },
-            { typeof(Vector2I),         Variant.Type.Vector2I },
-            { typeof(Rect2),            Variant.Type.Rect2 },
-            { typeof(Rect2I),           Variant.Type.Rect2I },
-            { typeof(Vector3),          Variant.Type.Vector3 },
-            { typeof(Vector3I),         Variant.Type.Vector3I },
-            { typeof(Transform2D),      Variant.Type.Transform2D },
-            { typeof(Vector4),          Variant.Type.Vector4 },
-            { typeof(Vector4I),         Variant.Type.Vector4I },
-            { typeof(Plane),            Variant.Type.Plane },
-            { typeof(Quaternion),       Variant.Type.Quaternion },
-            { typeof(Aabb),             Variant.Type.Aabb },
-            { typeof(Basis),            Variant.Type.Basis },
-            { typeof(Transform3D),      Variant.Type.Transform3D },
-            { typeof(Projection),       Variant.Type.Projection },
-            { typeof(Color),            Variant.Type.Color },
-            { typeof(StringName),       Variant.Type.StringName },
-            { typeof(NodePath),         Variant.Type.NodePath },
-            { typeof(Rid),              Variant.Type.Rid },
-            { typeof(GodotObject),      Variant.Type.Object },
-            { typeof(Callable),         Variant.Type.Callable },
-            { typeof(Signal),           Variant.Type.Signal },
-            { typeof(GDC.Dictionary),   Variant.Type.Dictionary },
-            { typeof(GDC.Array),        Variant.Type.Array },
-            { typeof(byte[]),           Variant.Type.PackedByteArray },
-            { typeof(int[]),            Variant.Type.PackedInt32Array },
-            { typeof(long[]),           Variant.Type.PackedInt64Array },
-            { typeof(float[]),          Variant.Type.PackedFloat32Array },
-            { typeof(double[]),         Variant.Type.PackedFloat64Array },
-            { typeof(string[]),         Variant.Type.PackedStringArray },
-            { typeof(Vector2[]),        Variant.Type.PackedVector2Array },
-            { typeof(Vector3[]),        Variant.Type.PackedVector3Array },
-            { typeof(Color[]),          Variant.Type.PackedColorArray },
-            { typeof(Vector4[]),        Variant.Type.PackedVector4Array }
-        };
+        private readonly Dictionary<string, EditorExportProperty> _properties = [];
+        private readonly Debouncer _notifyDebouncer = new();
 
-        private readonly GodotObject _target;
-        private GDC.Array<GDC.Dictionary>? _propertyData;
-        private readonly Dictionary<string, IEditorExportProperty> _properties = [];
+        /// <summary>
+        /// Object whose properties are provided by this forge.
+        /// </summary>
+        public GodotObject Target { get; } = target;
 
-        public EditorExportForge()
-        {
-            _target = this;
-        }
-
-        public EditorExportForge(GodotObject target)
-        {
-            _target = target;
-        }
-
-        public IEditorExportProperty<TVariant> CreateProperty<[MustBeVariant] TVariant>(string name)
+        /// <summary>
+        /// Creates a new property with the specified name. The property is of type <typeparamref name="TVariant"/>.
+        /// </summary>
+        /// <typeparam name="TVariant">Type of property. Must be a variant type.</typeparam>
+        /// <param name="name">Name of the property.</param>
+        /// <returns>Editor property.</returns>
+        public EditorExportProperty<TVariant> CreateProperty<[MustBeVariant] TVariant>(string name)
         {
             if (_properties.ContainsKey(name))
             {
@@ -119,27 +37,46 @@ namespace SabishiDev.ExportForge
             }
 
             var type = typeof(TVariant);
+            var variantType = VariantTypes.GetVariantType(type);
 
-            var variantType = type.IsAssignableTo(typeof(GodotObject))
-                ? Variant.Type.Object
-                : GetVariantType<TVariant>();
+            var property = new EditorExportProperty<TVariant>(name, variantType, this);
 
-            var property = new EditorExportProperty<TVariant> {
-                Name = name,
-                Type = variantType,
-                Target = _target
-            };
+            // Objects, enums and typed collections need a hint to be edited properly. Can be overridden.
+            var (hint, hintString) = VariantTypes.GetDefaultHint(type);
+
+            if (hint != PropertyHint.None)
+            {
+                property.SetPropertyHint(hint, hintString);
+            }
+
+            // Nil type means the property can hold any Variant.
+            if (variantType == Variant.Type.Nil)
+            {
+                property.AddUsageFlags(PropertyUsageFlags.NilIsVariant);
+            }
 
             _properties[name] = property;
 
             return property;
         }
 
-        public GDC.Array<GDC.Dictionary> ForgeProperties() => HandleGetPropertyList();
+        /// <summary>
+        /// Alias for <see cref="HandleGetPropertyList"/>.
+        /// Returns property list in format accepted by <see cref="GodotObject._GetPropertyList"/> method.
+        /// </summary>
+        /// <returns>Godot array of dictionaries.</returns>
+        public GDC.Array<GDC.Dictionary> ForgeProperties()
+        {
+            return HandleGetPropertyList();
+        }
 
+        /// <summary>
+        /// Returns property list in format accepted by <see cref="GodotObject._GetPropertyList"/> method.
+        /// </summary>
+        /// <returns>Godot array of dictionaries.</returns>
         public GDC.Array<GDC.Dictionary> HandleGetPropertyList()
         {
-            _propertyData = [];
+            GDC.Array<GDC.Dictionary> propertyData = [];
 
             foreach (var (_, prop) in _properties)
             {
@@ -150,12 +87,18 @@ namespace SabishiDev.ExportForge
                     continue;
                 }
 
-                _propertyData.Add(propData);
+                propertyData.Add(propData);
             }
 
-            return _propertyData;
+            return propertyData;
         }
 
+        /// <summary>
+        /// Handles getter for the property with specified name.
+        /// Should be called as return value of <see cref="GodotObject._Get"/> method.
+        /// </summary>
+        /// <param name="name">Name of the property.</param>
+        /// <returns>Value of the property.</returns>
         public Variant HandleGetter(StringName name)
         {
             if (!_properties.TryGetValue(name, out var property))
@@ -166,6 +109,13 @@ namespace SabishiDev.ExportForge
             return property.GetValue();
         }
 
+        /// <summary>
+        /// Handles setter for the property with specified name.
+        /// Should be called as return value of <see cref="GodotObject._Set"/> method.
+        /// </summary>
+        /// <param name="name">Name of the property.</param>
+        /// <param name="value">Value to set.</param>
+        /// <returns>Result of the setter operation.</returns>
         public bool HandleSetter(StringName name, Variant value)
         {
             if (!_properties.TryGetValue(name, out var property))
@@ -176,16 +126,32 @@ namespace SabishiDev.ExportForge
             return property.SetValue(value);
         }
 
-        private static Variant.Type GetVariantType<[MustBeVariant] TVariant>()
+        /// <summary>
+        /// Notifies the editor that the property list of <see cref="Target"/> changed.
+        /// Debounced notifications are shared by all properties of this forge.
+        /// </summary>
+        /// <param name="debounceMilliseconds">Debounce delay, or <c>null</c> to notify at the end of the frame.</param>
+        internal void NotifyPropertyListChanged(int? debounceMilliseconds)
         {
-            var type = typeof(TVariant);
-
-            if (_typeToVariantMap.TryGetValue(type, out var variantType))
+            if (debounceMilliseconds is { } delay)
             {
-                return variantType;
+                _ = _notifyDebouncer.Debounce(NotifyTargetPropertyListChanged, delay);
+                return;
             }
 
-            throw new InvalidOperationException($"Unsupported `Variant` type: {type}");
+            // Supersede any pending debounced notification.
+            _notifyDebouncer.Cancel();
+            NotifyTargetPropertyListChanged();
+        }
+
+        private void NotifyTargetPropertyListChanged()
+        {
+            if (!GodotObject.IsInstanceValid(Target))
+            {
+                return;
+            }
+
+            Target.CallDeferred(GodotObject.MethodName.NotifyPropertyListChanged);
         }
     }
 }

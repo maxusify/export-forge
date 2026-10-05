@@ -105,12 +105,11 @@ namespace MyProject
                 .OnGet(() => Callable.From(ConditionalAction))
                 .ToolButton("Conditional Action", icon: "Variant");
 
-            // Create a flags property.
+            // Create a flags property. Enum hints are added automatically.
             _forge
-                .CreateProperty<int>("Some Flags")
-                .OnGet(() => (int)SomeFlags)
-                .OnSet(value => SomeFlags = (FlagsExample)value)
-                .Flags<FlagsExample>();
+                .CreateProperty<FlagsExample>("Some Flags")
+                .OnGet(() => SomeFlags)
+                .OnSet(value => SomeFlags = value);
         }
 
         public override Array<Dictionary> _GetPropertyList()
@@ -147,67 +146,103 @@ Result:
     <img src="assets/showcase_01.png" alt="Result of the code above"/>
 </p>
 
+`FlagsExample` used above:
+
+```csharp
+[Flags]
+public enum FlagsExample : uint
+{
+    None = 0,
+    Flag1 = 1 << 0,
+    Flag2 = 1 << 1,
+    Flag3 = 1 << 2
+}
+```
+
 ## Documentation
 
-`EditorExportForge` available methods:
+### `EditorExportForge`
 
 ```csharp
-/// <summary>
-/// Creates a new property with the specified name. The property is of type <typeparamref name="TVariant"/>.
-/// </summary>
-/// <typeparam name="TVariant">Type of property. Must be a variant type. </typeparam>
-/// <param name="name">Name of the property. </param>
-/// <returns>Editor property.</returns>
-IEditorExportProperty<TVariant> CreateProperty<[MustBeVariant] TVariant>(string name);
-/// <summary>
-/// Returns property list in format accepted by <see cref="GodotObject._GetPropertyList"/> method.
-/// </summary>
-/// <returns>Godot array of dictionaries.</returns>
+// Object whose properties are provided by this forge.
+GodotObject Target { get; }
+
+// Creates a new property of type TVariant. Throws if a property with the same name already exists.
+EditorExportProperty<TVariant> CreateProperty<[MustBeVariant] TVariant>(string name);
+
+// Returns property list in format accepted by GodotObject._GetPropertyList().
 GDC.Array<GDC.Dictionary> HandleGetPropertyList();
-/// <summary>
-/// Alias for <see cref="HandleGetPropertyList"/>.
-/// Returns property list in format accepted by <see cref="GodotObject._GetPropertyList"/> method.
-/// </summary>
-/// <returns>Godot array of dictionaries.</returns>
+
+// Alias for HandleGetPropertyList().
 GDC.Array<GDC.Dictionary> ForgeProperties();
-/// <summary>
-/// Handles getter for the property with specified name.
-/// Should be called as return value of <see cref="GodotObject._Get"/> method.
-/// </summary>
-/// <param name="name">Name of the property. </param>
-/// <returns>Value of the property.</returns>
-Variant HandleGetter(string name);
-/// <summary>
-/// Handles setter for the property with specified name.
-/// Should be called as return value of <see cref="GodotObject._Set"/> method.
-/// </summary>
-/// <param name="name">Name of the property.</param>
-/// <param name="value">Value to set.</param>
-/// <returns>Result of the setter operation.</returns>
-bool HandleSetter(string name, Variant value);
+
+// Handles getter for the property with specified name. Return it from GodotObject._Get().
+Variant HandleGetter(StringName name);
+
+// Handles setter for the property with specified name. Return it from GodotObject._Set().
+bool HandleSetter(StringName name, Variant value);
 ```
 
-`EditorExportProperty` available methods:
+### `EditorExportProperty<TVariant>`
 
 ```csharp
-/// <summary>
-/// Builds the property data dictionary for use with <see cref="GodotObject._GetPropertyList()"/>.
-/// </summary>
-/// <returns></returns>
-GDC.Dictionary BuildPropertyData();
-/// <summary>
-/// Returns the current value of the property as a <see cref="Variant"/>.
-/// </summary>
-Variant GetValue();
-/// <summary>
-/// Sets the value of the property from a <see cref="Variant"/>.
-/// </summary>
-/// <param name="value">Value to set.</param>
-/// <returns>True if successful, false otherwise.</returns>
-bool SetValue(Variant value);
+// Callback returning the current value.
+EditorExportProperty<TVariant> OnGet(Func<TVariant> getter);
+
+// Callback setting the value. By default, the editor is notified (debounced) so conditional properties refresh.
+EditorExportProperty<TVariant> OnSet(
+    Action<TVariant> setter,
+    bool notifyWhenUpdated = true,
+    bool debounceNotifyWhenUpdated = true,
+    int debounceNotifyWhenUpdatedMilliseconds = 250
+);
+
+// Shows the property only when the condition is true.
+EditorExportProperty<TVariant> When(Func<bool> checkCondition);
+
+// Usage flag helpers.
+EditorExportProperty<TVariant> ReadOnly();   // Adds PropertyUsageFlags.ReadOnly.
+EditorExportProperty<TVariant> Store();      // Adds PropertyUsageFlags.Storage.
+EditorExportProperty<TVariant> Internal();   // Removes PropertyUsageFlags.Editor.
+EditorExportProperty<TVariant> SetUsageFlags(PropertyUsageFlags usageFlags);
+EditorExportProperty<TVariant> AddUsageFlags(PropertyUsageFlags usageFlags);
+EditorExportProperty<TVariant> RemoveUsageFlags(PropertyUsageFlags usageFlag);
+
+// Sets the property hint. Ends the method chain (see below).
+void SetPropertyHint(PropertyHint hint, string? hintString = null);
 ```
 
-Additional methods are available in `addons/export_forge/extensions` directory. 
+### Property hints
 
-Keep in mind that for whatever reason Godot will use only last of the applied extensions for a property that adds `PropertyHint`
-to the property. For example: `.Range(...).Link()` -> Only `Link()` will be applied.
+A property can only have a single `PropertyHint`, so every method that sets one ends the method chain.
+Call other methods first and the hint method last:
+
+```csharp
+_forge
+    .CreateProperty<float>("Speed")
+    .OnGet(() => Speed)
+    .OnSet(value => Speed = value)
+    .Range(0, 10, 0.1f, suffix: "m/s");   // Nothing can be chained after this.
+```
+
+Hint methods are extension methods defined in `addons/export_forge/EditorExportProperty*Extensions.cs`:
+
+| Property type | Methods |
+|---|---|
+| `int`, `long` | `Range`, `Flags<TFlags>`, `AsEnum` |
+| `float`, `double` | `Range` |
+| `Vector2`, `Vector3`, `Vector4` and their integer variants | `Range`, `Link` |
+| `string` | `Multiline`, `Password`, `Placeholder`, `AsEnum` |
+| `Color` | `NoAlpha` |
+| `Callable` | `ToolButton` |
+| `GDC.Array` | `ArrayType` |
+| `GDC.Dictionary` | `DictionaryType` |
+
+Some types get a hint automatically when the property is created. It can be replaced with `SetPropertyHint` or an extension method:
+
+| Property type | Automatic hint |
+|---|---|
+| Enum | `Enum` with enum names and values, or `Flags` for `[Flags]` enums |
+| `Resource` / `Node` derived | `ResourceType` / `NodeType` with the class name |
+| `GDC.Array<T>`, arrays of Godot objects, `StringName[]`, `NodePath[]`, `Rid[]` | `ArrayType` with the element type |
+| `GDC.Dictionary<TKey, TValue>` | `DictionaryType` with the key and value types |
